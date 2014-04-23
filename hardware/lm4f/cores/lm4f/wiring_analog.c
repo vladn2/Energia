@@ -1,9 +1,9 @@
 /*
  ************************************************************************
- *	wiring_analog.c
+ *  wiring_analog.c
  *
- *	Arduino core files for MSP430
- *		Copyright (c) 2012 Robert Wessels. All right reserved.
+ *  Arduino core files for MSP430
+ *      Copyright (c) 2012 Robert Wessels. All right reserved.
  *
  *
  ***********************************************************************
@@ -73,7 +73,7 @@ uint32_t getTimerBase(uint32_t offset) {
         return (TIMER0_BASE + (offset << 12));
     }
     else {
-    	return WTIMER0_BASE + ((offset-4) << 12);
+        return WTIMER0_BASE + ((offset-4) << 12);
     }
 }
 
@@ -107,12 +107,12 @@ void analogReference(uint16_t mode) {
 
 void PWMWrite(uint8_t pin, uint32_t analog_res, uint32_t duty, unsigned int freq) {
     if (duty == 0) {
-    	pinMode(pin, OUTPUT);
+        pinMode(pin, OUTPUT);
         digitalWrite(pin, LOW);
     }
     else if (duty >= analog_res) {
-    	pinMode(pin, OUTPUT);
-    	digitalWrite(pin, HIGH);
+        pinMode(pin, OUTPUT);
+        digitalWrite(pin, HIGH);
     }
     else {
         uint8_t bit = digitalPinToBitMask(pin); // get pin bit
@@ -123,7 +123,7 @@ void PWMWrite(uint8_t pin, uint32_t analog_res, uint32_t duty, unsigned int freq
         uint32_t timerBase = getTimerBase(offset);
         uint32_t timerAB = TIMER_A << timerToAB(timer);
 
-        if (port == NOT_A_PORT) return; 	// pin on timer?
+        if (port == NOT_A_PORT) return;     // pin on timer?
 
 #ifdef __TM4C1294NCPDT__
         uint32_t periodPWM = F_CPU/freq;
@@ -132,7 +132,7 @@ void PWMWrite(uint8_t pin, uint32_t analog_res, uint32_t duty, unsigned int freq
 #endif
 
 
-		enableTimerPeriph(offset);
+        enableTimerPeriph(offset);
         ROM_GPIOPinConfigure(timerToPinConfig(timer));
         ROM_GPIOPinTypeTimer((long unsigned int) portBase, bit);
 
@@ -143,21 +143,21 @@ void PWMWrite(uint8_t pin, uint32_t analog_res, uint32_t duty, unsigned int freq
         HWREG(timerBase + TIMER_O_CFG) = 0x04;
 
         if(timerAB == TIMER_A) {
-			//if timer is already set to PWM mode - skip the disable step
-			if (HWREG(timerBase + TIMER_O_TAMR) != PWM_MODE) {
-	        	HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TAEN;
-	        	HWREG(timerBase + TIMER_O_TAMR) = PWM_MODE;
-			}
+            //if timer is already set to PWM mode - skip the disable step
+            if (HWREG(timerBase + TIMER_O_TAMR) != PWM_MODE) {
+                HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TAEN;
+                HWREG(timerBase + TIMER_O_TAMR) = PWM_MODE;
+            }
         }
         else {
-			if (HWREG(timerBase + TIMER_O_TBMR) != PWM_MODE) {
-	        	HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TBEN;
-	        	HWREG(timerBase + TIMER_O_TBMR) = PWM_MODE;
-			}
+            if (HWREG(timerBase + TIMER_O_TBMR) != PWM_MODE) {
+                HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TBEN;
+                HWREG(timerBase + TIMER_O_TBMR) = PWM_MODE;
+            }
         }
 
-		//use floting point for intermediate computations to avoid overflow
-		uint32_t match = (float)(analog_res-duty)*periodPWM/analog_res;
+        //use floting point for intermediate computations to avoid overflow
+        uint32_t match = (float)(analog_res-duty)*periodPWM/analog_res;
         ROM_TimerLoadSet(timerBase, timerAB, periodPWM);
         ROM_TimerMatchSet(timerBase, timerAB, match);
 
@@ -197,7 +197,7 @@ uint16_t analogRead(uint8_t pin) {
     ROM_ADCProcessorTrigger(ADC0_BASE, 3);
     while(!ROM_ADCIntStatus(ADC0_BASE, 3, false)) {
     }
-	ROM_ADCIntClear(ADC0_BASE, 3);
+    ROM_ADCIntClear(ADC0_BASE, 3);
     ROM_ADCSequenceDataGet(ADC0_BASE, 3, (unsigned long*) value);
     return value[0];
 }
