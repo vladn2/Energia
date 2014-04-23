@@ -42,7 +42,7 @@
 #include "driverlib/timer.h"
 
 
-#define PWM_MODE 0x20A
+#define PWM_MODE 0x50A
 
 #ifdef __TM4C1294NCPDT__
 uint32_t getTimerBase(uint32_t offset) {
@@ -132,7 +132,7 @@ void PWMWrite(uint8_t pin, uint32_t analog_res, uint32_t duty, unsigned int freq
 #endif
 
 
-        enableTimerPeriph(offset);
+		enableTimerPeriph(offset);
         ROM_GPIOPinConfigure(timerToPinConfig(timer));
         ROM_GPIOPinTypeTimer((long unsigned int) portBase, bit);
 
@@ -143,31 +143,36 @@ void PWMWrite(uint8_t pin, uint32_t analog_res, uint32_t duty, unsigned int freq
         HWREG(timerBase + TIMER_O_CFG) = 0x04;
 
         if(timerAB == TIMER_A) {
-        	HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TAEN;
-        	HWREG(timerBase + TIMER_O_TAMR) = PWM_MODE;
+			//if timer is already set to PWM mode - skip the disable step
+			if (HWREG(timerBase + TIMER_O_TAMR) != PWM_MODE) {
+	        	HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TAEN;
+	        	HWREG(timerBase + TIMER_O_TAMR) = PWM_MODE;
+			}
         }
         else {
-        	HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TBEN;
-        	HWREG(timerBase + TIMER_O_TBMR) = PWM_MODE;
+			if (HWREG(timerBase + TIMER_O_TBMR) != PWM_MODE) {
+	        	HWREG(timerBase + TIMER_O_CTL) &= ~TIMER_CTL_TBEN;
+	        	HWREG(timerBase + TIMER_O_TBMR) = PWM_MODE;
+			}
         }
+
+		//use floting point for intermediate computations to avoid overflow
+		uint32_t match = (float)(analog_res-duty)*periodPWM/analog_res;
         ROM_TimerLoadSet(timerBase, timerAB, periodPWM);
-        ROM_TimerMatchSet(timerBase, timerAB,
-                (analog_res-duty)*periodPWM/analog_res);
+        ROM_TimerMatchSet(timerBase, timerAB, match);
 
         //
         // If using a 16-bit timer, with a periodPWM > 0xFFFF,
         // need to use a prescaler
         //
-        if((offset < WTIMER0) && (periodPWM > 0xFFFF)) {
-            ROM_TimerPrescaleSet(timerBase, timerAB,
-                (periodPWM & 0xFFFF0000) >> 16);
-            ROM_TimerPrescaleMatchSet(timerBase, timerAB,
-                (((analog_res-duty)*periodPWM/analog_res) & 0xFFFF0000) >> 16);
+        if((offset < WTIMER0) && periodPWM>>16) {
+            ROM_TimerPrescaleSet(timerBase, timerAB, periodPWM>>16);
+            ROM_TimerPrescaleMatchSet(timerBase, timerAB, match>>16);
         }
         ROM_TimerEnable(timerBase, timerAB);
     }
 }
-void analogWrite(uint8_t pin, int val) {
+void analogWrite(uint8_t pin, int val) {
     //
     //  duty cycle(%) = val / 255;
     //  Frequency of 490Hz specified by Arduino API
